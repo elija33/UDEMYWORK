@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Hello world</title>
+  <meta name="description" content="Some work on webpack"><meta name="viewport" content="width=device-width, initial-scale=1"><script defer src="bundle.ea84d2f1acebf4028ec4.js"></script><link href="styles.1ff70458f216d0c24ee7.css" rel="stylesheet"></head>
+  <body>
+  </body>
+</html>
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import { Form, Button, FormInput, FormDateSelector, Loader } from '@connectcore/connect-components-react';
+import LetterListComponent from '~components/letter-search/LetterListComponents';
+import { createGridData } from '~components/api/utils';
+import { fetchLetterData } from '~util/Mock';
+
+const LetterSearch = () => {
+    const formInitialState = {
+        dateFrom: '',
+        dateTo: '',
+        accountId: '',
+    };
+    const [formData, setFormData] = useState(formInitialState);
+    const [showLetterListComponent, setShowLetterListComponent] = useState(false);
+    const [letters, setLetters] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleChanges = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const isFormValid = formData.dateFrom && formData.dateTo;
+
+    function formatDate(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    const handleSearchClick = async () => {
+        if (!isFormValid) return;
+        setIsLoading(true);
+        const formattedDateFrom = formatDate(formData.dateFrom);
+        const formattedDateTo = formatDate(formData.dateTo);
+        const requestOptions = {
+            dateType: 'LAST',
+            fromDate: formattedDateFrom,
+            toDate: formattedDateTo,
+            accountId: formData.accountId || '',
+        };
+        const response = await fetchLetterData(requestOptions);
+        const formattedGridData = createGridData(response);
+        setLetters(formattedGridData);
+        setShowLetterListComponent(true);
+        setIsLoading(false);
+    };
+
+    const handleResetClick = () => {
+        setShowLetterListComponent(false);
+        setFormData(formInitialState);
+    };
+
+    const currentDate = new Date();
+
+    return (
+        <>
+            <Form className="d-flex justify-content-between">
+                <div className="Letter-form-container">
+                    <h2>Last Letter Date</h2>
+                    <div style={{ display: 'flex' }}>
+                        <div style={{ margin: '0.5rem' }}>
+                            <FormDateSelector label="From Date:" id="fromDate"
+                                onChange={({ value }) => handleChanges('dateFrom', value)}
+                                value={formData.dateFrom} max={formData.dateTo || currentDate}
+                                key='fromDateKey' />
+                        </div>
+                        <div style={{ margin: '0.5rem' }}>
+                            <FormDateSelector label="To Date:" id="toDate"
+                                onChange={({ value }) => handleChanges('dateTo', value)}
+                                value={formData.dateTo} max={currentDate} min={formData.dateFrom}
+                                key='toDateKey' />
+                        </div>
+                        <FormInput label="Account #" value={formData.accountId}
+                            onChange={({ value }) => handleChanges('accountId', value)}
+                            className="lettersearchaccount" id="htmlLightInput" />
+                    </div>
+                    <Button kind="primary" disabled={!isFormValid} onClick={handleSearchClick}>Search</Button>
+                    <Button kind="secondary" onClick={handleResetClick}>Reset</Button>
+                </div>
+                <div className="letter-grid">
+                    {isLoading ? <Loader show size="sm" /> : null}
+                </div>
+            </Form>
+            {showLetterListComponent && !isLoading && <LetterListComponent letters={letters} />}
+        </>
+    );
+};
+
+export default LetterSearch;
